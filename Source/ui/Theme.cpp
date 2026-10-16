@@ -2,7 +2,92 @@
 
 using namespace juce;
 
+namespace Theme
+{
+namespace
+{
+    Settings settings;
+    bool initialised = false;
+
+    PropertiesFile::Options fileOptions()
+    {
+        PropertiesFile::Options o;
+        o.applicationName = "Meerum";
+        o.folderName = "Meerum";
+        o.filenameSuffix = ".settings";
+        o.osxLibrarySubFolder = "Application Support";
+        return o;
+    }
+}
+
+void apply (const Settings& s)
+{
+    settings = s;
+
+    if (s.light)
+    {
+        background  = Colour (0xffe6e9ee);
+        panel       = Colour (0xfff7f8fa);
+        panelHeader = Colour (0xffdfe3e9);
+        outline     = Colour (0xffc3c9d2);
+        well        = Colour (0xffeef0f3);
+        text        = Colour (0xff1c2129);
+        textDim     = Colour (0xff5c6572);
+        blackKey    = Colour (0xff2a2f37);
+    }
+    else
+    {
+        background  = Colour (0xff101318);
+        panel       = Colour (0xff1a1f27);
+        panelHeader = Colour (0xff232a35);
+        outline     = Colour (0xff2f3743);
+        well        = Colour (0xff0b0e12);
+        text        = Colour (0xffd8dee7);
+        textDim     = Colour (0xff8791a0);
+        blackKey    = well;
+    }
+
+    // In light mode very bright accents (e.g. yellow) would vanish on white, so darken them a bit.
+    accent    = s.light && s.accent.getPerceivedBrightness() > 0.75f ? s.accent.darker (0.35f) : s.accent;
+    accentDim = accent.interpolatedWith (panel, 0.55f);
+    accentAlt = accent.withRotatedHue (0.12f);
+    onAccent  = accent.getPerceivedBrightness() > 0.6f ? Colour (0xff101318) : Colours::white;
+
+    ++generation();
+}
+
+const Settings& current() { return settings; }
+
+void initialise()
+{
+    if (initialised)
+        return;
+    initialised = true;
+
+    PropertiesFile file (fileOptions());
+    Settings s;
+    s.light = file.getBoolValue ("lightMode", false);
+    s.accent = Colour::fromString (file.getValue ("accent", defaultAccent.toString())).withAlpha (1.0f);
+    apply (s);
+}
+
+void setAndSave (const Settings& s)
+{
+    apply (s);
+    PropertiesFile file (fileOptions());
+    file.setValue ("lightMode", s.light);
+    file.setValue ("accent", s.accent.toString());
+    file.saveIfNeeded();
+}
+}
+
 MeerumLookAndFeel::MeerumLookAndFeel()
+{
+    Theme::initialise();
+    refreshColours();
+}
+
+void MeerumLookAndFeel::refreshColours()
 {
     setColour (ResizableWindow::backgroundColourId, Theme::background);
     setColour (ComboBox::backgroundColourId,        Theme::well);
@@ -13,12 +98,12 @@ MeerumLookAndFeel::MeerumLookAndFeel()
     setColour (PopupMenu::textColourId,             Theme::text);
     setColour (PopupMenu::headerTextColourId,       Theme::accent);
     setColour (PopupMenu::highlightedBackgroundColourId, Theme::accentDim);
-    setColour (PopupMenu::highlightedTextColourId,  Colours::white);
+    setColour (PopupMenu::highlightedTextColourId,  Theme::text);
     setColour (Label::textColourId,                 Theme::text);
     setColour (TextButton::buttonColourId,          Theme::panelHeader);
     setColour (TextButton::buttonOnColourId,        Theme::accent);
     setColour (TextButton::textColourOffId,         Theme::textDim);
-    setColour (TextButton::textColourOnId,          Theme::background);
+    setColour (TextButton::textColourOnId,          Theme::onAccent);
     setColour (Slider::textBoxTextColourId,         Theme::text);
     setColour (Slider::textBoxOutlineColourId,      Colours::transparentBlack);
     setColour (TooltipWindow::backgroundColourId,   Theme::panelHeader);
@@ -116,7 +201,7 @@ void MeerumLookAndFeel::drawToggleButton (Graphics& g, ToggleButton& b, bool hig
     g.fillRoundedRectangle (r, 3.0f);
     g.setColour (Theme::outline);
     g.drawRoundedRectangle (r, 3.0f, 1.0f);
-    g.setColour (on ? Theme::background : Theme::textDim);
+    g.setColour (on ? Theme::onAccent : Theme::textDim);
     g.setFont (Theme::font (11.0f, true));
     g.drawText (b.getButtonText(), r, Justification::centred, false);
 }
@@ -136,7 +221,7 @@ void MeerumLookAndFeel::drawButtonBackground (Graphics& g, Button& b, const Colo
 void MeerumLookAndFeel::drawButtonText (Graphics& g, TextButton& b, bool, bool)
 {
     g.setFont (getTextButtonFont (b, b.getHeight()));
-    g.setColour (b.getToggleState() ? Theme::background : Theme::text);
+    g.setColour (b.getToggleState() ? Theme::onAccent : Theme::text);
     g.drawText (b.getButtonText(), b.getLocalBounds(), Justification::centred, false);
 }
 

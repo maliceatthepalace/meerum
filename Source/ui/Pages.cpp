@@ -271,10 +271,15 @@ LfoSection::Page::Page (APVTS& s, int index)
                                                        &shapeLabel, &modeLabel })
         addAndMakeVisible (c);
 
-    styleCaption (shapeLabel, "SHAPE");
-    styleCaption (modeLabel, "MODE");
+    lookAndFeelChanged();
     timerCallback();
     startTimerHz (10);
+}
+
+void LfoSection::Page::lookAndFeelChanged()
+{
+    styleCaption (shapeLabel, "SHAPE");
+    styleCaption (modeLabel, "MODE");
 }
 
 void LfoSection::Page::timerCallback()
@@ -485,6 +490,12 @@ namespace
         c.amount = row;
         return c;
     }
+}
+
+void MatrixPage::lookAndFeelChanged()
+{
+    for (auto& row : rows)
+        row->index.setColour (Label::textColourId, Theme::accent);
 }
 
 void MatrixPage::paint (Graphics& g)

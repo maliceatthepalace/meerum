@@ -12,6 +12,7 @@ public:
     Knob (APVTS& state, const juce::String& paramID, const juce::String& caption);
 
     void resized() override;
+    void lookAndFeelChanged() override { updateCaption(); }
     juce::Slider& getSlider() noexcept { return slider; }
 
 private:

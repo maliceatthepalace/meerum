@@ -119,6 +119,7 @@ private:
         Page (APVTS& state, int index);
         void resized() override;
         void timerCallback() override;
+        void lookAndFeelChanged() override;
 
         LfoPreview preview;
         Choice shape, mode, division;
@@ -176,6 +177,7 @@ public:
     explicit MatrixPage (APVTS& state);
     void paint (juce::Graphics&) override;
     void resized() override;
+    void lookAndFeelChanged() override;
 
 private:
     struct Row

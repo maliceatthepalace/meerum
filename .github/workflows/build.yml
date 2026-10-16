@@ -2,6 +2,8 @@ name: Build
 
 on:
   push:
+    branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
   workflow_dispatch:
 
@@ -53,13 +55,63 @@ jobs:
         working-directory: build
         run: xvfb-run -a ./MeerumRenderTest_artefacts/Release/MeerumRenderTest test-renders
 
-      - name: Upload plugins
+      - name: Package
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME}"
+          [[ "$GITHUB_REF" == refs/tags/* ]] || version="dev-${GITHUB_SHA::7}"
+          out="Meerum-${version}-${{ matrix.name }}"
+          art=build/Meerum_artefacts/Release
+          mkdir -p "dist/$out"
+          cp -R "$art/VST3/Meerum.vst3" "dist/$out/"
+          cp LICENSE README.md "dist/$out/"
+          case "${{ runner.os }}" in
+            macOS)
+              cp -R "$art/AU/Meerum.component" "$art/Standalone/Meerum.app" "dist/$out/"
+              # Re-seal with an ad-hoc signature: JUCE adds files to the bundles after linking,
+              # which leaves the original seal invalid and makes macOS report them as damaged.
+              for b in "dist/$out/Meerum.vst3" "dist/$out/Meerum.component" "dist/$out/Meerum.app"; do
+                codesign --force --deep --sign - "$b"
+              done
+              xattr -cr "dist/$out"
+              (cd dist && ditto -c -k --norsrc --noextattr --keepParent "$out" "$out.zip") ;;
+            Windows)
+              cp "$art/Standalone/Meerum.exe" "dist/$out/"
+              (cd dist && 7z a -tzip "$out.zip" "$out" > /dev/null) ;;
+            Linux)
+              cp -R "$art/LV2/Meerum.lv2" "dist/$out/"
+              cp "$art/Standalone/Meerum" "dist/$out/"
+              (cd dist && tar -czf "$out.tar.gz" "$out") ;;
+          esac
+          rm -rf "dist/$out"
+          ls -la dist
+
+      - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: Meerum-${{ matrix.name }}
-          path: |
-            build/Meerum_artefacts/Release/VST3
-            build/Meerum_artefacts/Release/AU
-            build/Meerum_artefacts/Release/LV2
-            build/Meerum_artefacts/Release/Standalone
-          if-no-files-found: warn
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Meerum-*
+          merge-multiple: true
+          path: dist
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Meerum $GITHUB_REF_NAME" --notes-file .github/release-notes.md

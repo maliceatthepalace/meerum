@@ -167,6 +167,11 @@ int main (int argc, char* argv[])
     {
         proc.setCurrentProgram (1);
         std::unique_ptr<juce::AudioProcessorEditor> editor (proc.createEditor());
+        auto* meerumEditor = dynamic_cast<MeerumEditor*> (editor.get());
+
+        // Snapshots use the default look, independent of the user's saved theme settings.
+        Theme::apply ({});
+        meerumEditor->refreshTheme();
         auto snapshot = [&] (const juce::String& name)
         {
             juce::PNGImageFormat png;
@@ -196,6 +201,37 @@ int main (int argc, char* argv[])
                     b->onClick();
                 snapshot (page.toLowerCase());
             }
+
+        if (auto* b = findButton (*editor, "OSC"))
+        {
+            b->setToggleState (true, juce::dontSendNotification);
+            if (b->onClick)
+                b->onClick();
+        }
+
+        Theme::apply ({ true, juce::Colour (0xffff9f43) }); // light mode, orange accent
+        meerumEditor->refreshTheme();
+        snapshot ("osc-light-orange");
+
+        Theme::apply ({ false, juce::Colour (0xff9b7cff) }); // dark mode, purple accent
+        meerumEditor->refreshTheme();
+        snapshot ("osc-dark-purple");
+
+        Theme::apply ({});
+        ThemePanel themePanel;
+        themePanel.setLookAndFeel (&editor->getLookAndFeel());
+        juce::PNGImageFormat png;
+        const auto file = outDir.getChildFile ("ui-theme-panel.png");
+        file.deleteFile();
+        juce::FileOutputStream stream (file);
+        juce::Image image (juce::Image::ARGB, themePanel.getWidth(), themePanel.getHeight(), true);
+        {
+            juce::Graphics g (image);
+            g.fillAll (Theme::panel);
+        }
+        themePanel.paintEntireComponent (*std::make_unique<juce::Graphics> (image), false);
+        png.writeImageToStream (image, stream);
+        themePanel.setLookAndFeel (nullptr);
     }
 
     std::cout << (failures == 0 ? "ALL CHECKS PASSED" : juce::String (failures) + " CHECK(S) FAILED") << std::endl;

@@ -20,6 +20,13 @@ Ein Wavetable-Synthesizer, inspiriert von modernen Wavetable-Synths – als **VS
 - **Effekte**: Distortion (Soft/Hard/Fold/Crush), Chorus, Delay (Sync, Ping-Pong), Reverb
 - Poly bis 16 Stimmen, Mono/Legato, Glide, Pitch-Bend-Bereich, Sustain-Pedal
 - 8 Factory-Presets, eigene Presets speichern (`Dokumente/Meerum/Presets/*.mrpreset`)
+- **Eigene Farben**: Über „THEME“ oben rechts Dark-/Light-Modus und Akzentfarbe (Standard: Grün) wählen –
+  wird als persönliche Einstellung gespeichert und gilt für alle Projekte
+
+## Download
+
+Fertige Versionen für **Windows, macOS und Linux** gibt es unter
+[**Releases**](https://github.com/maliceatthepalace/meerum/releases/latest) – inklusive Installationsanleitung.
 
 ## Bauen
 

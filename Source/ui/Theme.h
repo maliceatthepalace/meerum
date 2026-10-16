@@ -4,15 +4,45 @@
 
 namespace Theme
 {
-    const juce::Colour background   { 0xff101318 };
-    const juce::Colour panel        { 0xff1a1f27 };
-    const juce::Colour panelHeader  { 0xff232a35 };
-    const juce::Colour outline      { 0xff2f3743 };
-    const juce::Colour well         { 0xff0b0e12 };
-    const juce::Colour accent       { 0xff3fd0e0 };
-    const juce::Colour accentDim    { 0xff1d6d78 };
-    const juce::Colour text         { 0xffd8dee7 };
-    const juce::Colour textDim      { 0xff8791a0 };
+    // The active palette. Mutable so the user can switch dark/light mode and the accent colour
+    // at runtime; only touched on the message thread, shared by all open editors.
+    inline juce::Colour background, panel, panelHeader, outline, well, text, textDim;
+    inline juce::Colour accent, accentDim, accentAlt, onAccent; // onAccent = text drawn on top of accent
+    inline juce::Colour blackKey;
+
+    const juce::Colour defaultAccent { 0xff3ddc84 }; // Meerum green
+
+    struct Settings
+    {
+        bool light = false;
+        juce::Colour accent = defaultAccent;
+    };
+
+    // Accent swatches offered in the theme panel.
+    inline const std::vector<std::pair<juce::String, juce::Colour>>& accentPresets()
+    {
+        static const std::vector<std::pair<juce::String, juce::Colour>> presets {
+            { "Green", defaultAccent },          { "Cyan", juce::Colour (0xff3fd0e0) },
+            { "Blue", juce::Colour (0xff4c8dff) }, { "Purple", juce::Colour (0xff9b7cff) },
+            { "Pink", juce::Colour (0xffff5fa2) }, { "Red", juce::Colour (0xffff5a5a) },
+            { "Orange", juce::Colour (0xffff9f43) }, { "Yellow", juce::Colour (0xffffd84d) } };
+        return presets;
+    }
+
+    // Recomputes the palette and bumps generation() so open editors refresh. Does not save.
+    void apply (const Settings&);
+    const Settings& current();
+
+    // Loads the saved user settings once per process (first editor) and applies them.
+    void initialise();
+    // Applies and stores the settings in the user's application-data folder.
+    void setAndSave (const Settings&);
+
+    inline std::atomic<int>& generation()
+    {
+        static std::atomic<int> g { 0 };
+        return g;
+    }
 
     inline juce::Font font (float height, bool bold = false)
     {
@@ -24,6 +54,9 @@ class MeerumLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     MeerumLookAndFeel();
+
+    // Re-reads the Theme palette into the LookAndFeel colour IDs.
+    void refreshColours();
 
     void drawRotarySlider (juce::Graphics&, int x, int y, int w, int h, float pos,
                            float startAngle, float endAngle, juce::Slider&) override;

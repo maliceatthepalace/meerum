@@ -24,7 +24,7 @@ void MeerumEditor::Content::paint (Graphics& g)
     auto logo = bar.removeFromLeft (170).reduced (14, 0);
     g.setFont (Theme::font (24.0f, true));
     g.setGradientFill (ColourGradient (Theme::accent, (float) logo.getX(), 0.0f,
-                                       Colour (0xff8a7cff), (float) logo.getRight(), 0.0f, false));
+                                       Theme::accentAlt, (float) logo.getRight(), 0.0f, false));
     g.drawText ("MEERUM", logo, Justification::centredLeft, false);
 }
 
@@ -55,27 +55,22 @@ MeerumEditor::MeerumEditor (MeerumProcessor& p)
     nextButton.onClick = [this] { stepPreset (+1); };
     saveButton.onClick = [this] { savePresetAs(); };
     saveButton.setTooltip ("Save the current sound as a user preset");
+    themeButton.onClick = [this] { showThemePanel(); };
+    themeButton.setTooltip ("Colours: dark/light mode and accent colour");
 
-    for (auto* c : std::initializer_list<Component*> { &presetBox, &prevButton, &nextButton, &saveButton, &legato,
+    for (auto* c : std::initializer_list<Component*> { &presetBox, &prevButton, &nextButton, &saveButton, &themeButton, &legato,
                                                        &pageTabs, &oscPage, &fxPage, &matrixPage, &keyboard })
         content.addAndMakeVisible (c);
 
     pageTabs.onChange = [this] (int index) { showPage (index); };
     showPage (0);
 
-    keyboard.setColour (MidiKeyboardComponent::whiteNoteColourId,            Colour (0xffd9dee5));
-    keyboard.setColour (MidiKeyboardComponent::blackNoteColourId,            Theme::well);
-    keyboard.setColour (MidiKeyboardComponent::keySeparatorLineColourId,     Theme::outline);
-    keyboard.setColour (MidiKeyboardComponent::mouseOverKeyOverlayColourId,  Theme::accent.withAlpha (0.3f));
-    keyboard.setColour (MidiKeyboardComponent::keyDownOverlayColourId,       Theme::accent);
-    keyboard.setColour (MidiKeyboardComponent::shadowColourId,               Colours::transparentBlack);
-    keyboard.setColour (MidiKeyboardComponent::upDownButtonBackgroundColourId, Theme::panelHeader);
-    keyboard.setColour (MidiKeyboardComponent::upDownButtonArrowColourId,    Theme::accent);
     keyboard.setKeyWidth (19.0f);
     keyboard.setLowestVisibleKey (24);
     keyboard.setWantsKeyboardFocus (false);
 
     refreshPresetList();
+    refreshTheme();
 
     setResizable (true, true);
     setResizeLimits (baseWidth * 2 / 3, baseHeight * 2 / 3, baseWidth * 2, baseHeight * 2);
@@ -115,6 +110,8 @@ void MeerumEditor::layoutContent()
     presetBox.setBounds (presetArea);
 
     bar.reduce (8, 3);
+    themeButton.setBounds (bar.removeFromRight (64).withSizeKeepingCentre (64, 22));
+    bar.removeFromRight (6);
     legato.setBounds (bar.removeFromRight (64).withSizeKeepingCentre (64, 22));
     bar.removeFromRight (8);
     auto knobs = bar.removeFromRight (4 * 58);
@@ -214,8 +211,37 @@ void MeerumEditor::savePresetAs()
                           });
 }
 
+void MeerumEditor::showThemePanel()
+{
+    // Parented to the editor so it uses our LookAndFeel and stays inside the plugin window.
+    juce::CallOutBox::launchAsynchronously (std::make_unique<ThemePanel>(),
+                                            getLocalArea (&content, themeButton.getBounds()), this);
+}
+
+void MeerumEditor::refreshTheme()
+{
+    lastThemeGeneration = Theme::generation().load();
+    lookAndFeel.refreshColours();
+
+    const bool light = Theme::current().light;
+    keyboard.setColour (MidiKeyboardComponent::whiteNoteColourId,            light ? Colours::white : Colour (0xffd9dee5));
+    keyboard.setColour (MidiKeyboardComponent::blackNoteColourId,            Theme::blackKey);
+    keyboard.setColour (MidiKeyboardComponent::keySeparatorLineColourId,     Theme::outline);
+    keyboard.setColour (MidiKeyboardComponent::mouseOverKeyOverlayColourId,  Theme::accent.withAlpha (0.3f));
+    keyboard.setColour (MidiKeyboardComponent::keyDownOverlayColourId,       Theme::accent);
+    keyboard.setColour (MidiKeyboardComponent::shadowColourId,               Colours::transparentBlack);
+    keyboard.setColour (MidiKeyboardComponent::upDownButtonBackgroundColourId, Theme::panelHeader);
+    keyboard.setColour (MidiKeyboardComponent::upDownButtonArrowColourId,    Theme::accent);
+
+    sendLookAndFeelChange(); // every child re-reads its colours and repaints
+    repaint();
+}
+
 void MeerumEditor::timerCallback()
 {
+    if (Theme::generation().load() != lastThemeGeneration)
+        refreshTheme();
+
     const int generation = meerumProcessor.presetGeneration.load();
     if (generation == lastGeneration)
         return;

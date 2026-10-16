@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/Pages.h"
+#include "ui/ThemePanel.h"
 
 class MeerumEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
@@ -10,6 +11,9 @@ public:
     ~MeerumEditor() override;
 
     void resized() override;
+
+    // Re-applies the current Theme palette (called automatically when the user changes it).
+    void refreshTheme();
 
     static constexpr int baseWidth = 1060, baseHeight = 720;
 
@@ -34,6 +38,7 @@ private:
     void stepPreset (int delta);
     void savePresetAs();
     void showPage (int index);
+    void showThemePanel();
 
     MeerumProcessor& meerumProcessor;
     MeerumLookAndFeel lookAndFeel;
@@ -42,12 +47,12 @@ private:
 
     // Top bar
     juce::ComboBox presetBox;
-    juce::TextButton prevButton { "<" }, nextButton { ">" }, saveButton { "SAVE" };
+    juce::TextButton prevButton { "<" }, nextButton { ">" }, saveButton { "SAVE" }, themeButton { "THEME" };
     KnobSet globalKnobs;
     Toggle legato;
     std::vector<PresetEntry> presets;
     std::unique_ptr<juce::FileChooser> chooser;
-    int lastGeneration = -1;
+    int lastGeneration = -1, lastThemeGeneration = -1;
 
     TabBar pageTabs { { "OSC", "FX", "MATRIX" } };
     OscPage oscPage;
