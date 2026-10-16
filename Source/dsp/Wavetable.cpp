@@ -269,10 +269,9 @@ namespace
             const double t = pos - v;
             const double a = juce::jmap (t, f1[v], f1[v + 1]);
             const double b = juce::jmap (t, f2[v], f2[v + 1]);
-            constexpr double fundamental = 110.0;
             return additive (p, 40, [a, b] (int k)
             {
-                const double f = k * fundamental;
+                const double f = k * 110.0; // formants are placed relative to a 110 Hz fundamental
                 return std::exp (-std::pow ((f - a) / 120.0, 2.0))
                      + 0.7 * std::exp (-std::pow ((f - b) / 160.0, 2.0))
                      + 0.08 / k;
